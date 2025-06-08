@@ -1,3 +1,4 @@
 [submodule "npm-distribution"]
 	path = npm-distribution
 	url = https://github.com/raiyanu/filecooker-npm-cli.git
+	branch = master
