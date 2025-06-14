@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
 use colored::*;
-use dialoguer::Confirm;
-use std::{fs, path::Path};
+use dialoguer::{console::Term, Confirm};
+use std::{env, fs, path::Path};
 
 #[derive(Parser)]
-#[command(name = "filemaker", about = "CLI to safely create files with auto directories")]
+#[command(name = "filecooker", about = "CLI to safely create files with auto directories")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -28,7 +28,7 @@ fn main() {
             for file in files {
                 let path = Path::new(&file);
 
-                // Create parent directories if missing
+                // Create parent directories if needed
                 if let Some(parent) = path.parent() {
                     if !parent.exists() {
                         println!("{}", format!("Creating dir: {}", parent.display()).green());
@@ -39,20 +39,25 @@ fn main() {
                     }
                 }
 
-                // Handle file creation
-                if path.exists() {
-                    let overwrite = Confirm::new()
-                        .with_prompt(format!(
-                            "{} exists. Overwrite?",
-                            file.yellow()
-                        ))
-                        .interact()
-                        .unwrap();
-
-                    if !overwrite {
-                        println!("{}", "Skipped.".dimmed());
-                        continue;
+                // Handle existing file
+                let should_write = if path.exists() {
+                    match env::var("FORCE_YN").ok().as_deref() {
+                        Some("y") => true,
+                        Some("n") => false,
+                        _ => {
+                            Confirm::new()
+                                .with_prompt(format!("{} exists. Overwrite?", file.yellow()))
+                                .interact_on(&Term::stdout())
+                                .unwrap()
+                        }
                     }
+                } else {
+                    true
+                };
+
+                if !should_write {
+                    println!("{}", "Skipped.".dimmed());
+                    continue;
                 }
 
                 match fs::write(path, b"") {
@@ -63,4 +68,3 @@ fn main() {
         }
     }
 }
-
